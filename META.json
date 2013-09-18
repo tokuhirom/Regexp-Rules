@@ -1,5 +1,5 @@
 {
-   "abstract" : "It's new $module",
+   "abstract" : "Write your rules in Perl6 like syntax.",
    "author" : [
       "tokuhirom <tokuhirom@gmail.com>"
    ],
@@ -42,7 +42,9 @@
       },
       "runtime" : {
          "requires" : {
-            "perl" : "5.008005"
+            "Parse::Keyword" : "0",
+            "parent" : "0",
+            "perl" : "5.014000"
          }
       },
       "test" : {
@@ -52,5 +54,16 @@
       }
    },
    "release_status" : "unstable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/tokuhirom/Regexp-Rules/issues"
+      },
+      "homepage" : "https://github.com/tokuhirom/Regexp-Rules",
+      "repository" : {
+         "type" : "git",
+         "url" : "git://github.com/tokuhirom/Regexp-Rules.git",
+         "web" : "https://github.com/tokuhirom/Regexp-Rules"
+      }
+   },
    "version" : "0.01"
 }

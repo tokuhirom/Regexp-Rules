@@ -224,7 +224,7 @@ __END__
 
 =head1 NAME
 
-Regexp::Rules - Write your rules in Perl6 like syntax.
+Regexp::Rules - (EXPERIMENTAL) Write your rules in Perl6 like syntax.
 
 =head1 SYNOPSIS
 

@@ -1,5 +1,5 @@
 {
-   "abstract" : "Write your rules in Perl6 like syntax.",
+   "abstract" : "(EXPERIMENTAL) Write your rules in Perl6 like syntax.",
    "author" : [
       "tokuhirom <tokuhirom@gmail.com>"
    ],

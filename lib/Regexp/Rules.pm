@@ -20,7 +20,6 @@ our @TOKENS;
 our $TOP_OK;
 our $ACTION;
 our @STACK;
-our @MARK;
 
 our $NESTED;
 BEGIN {
@@ -47,15 +46,14 @@ sub grammar {
     *{"${name}::regexp"} = sub { $re };
 }
 
-sub _pop_stack {
+sub _prepare {
+    push @STACK, [];
+}
+
+sub _finalize {
     my $name = shift;
-    my $last = pop @MARK;
-    my @ret;
-    while ($last < @STACK) {
-        my $s = pop @STACK;
-        push @ret, $s;
-    }
-    return \@ret;
+    my $top = pop @STACK;
+    push $STACK[-1], $ACTION->$name($top);
 }
 
 sub _compile_re {
@@ -63,8 +61,7 @@ sub _compile_re {
     my $arg = $is_token ? '$^N' : do {
         "Regexp::Rules::_pop_stack('$name')"
     };
-    return sprintf("    (?<%s>  (?> (?{ push \@MARK, 0+\@STACK }) %s (?{ push \@STACK, \$Regexp::Rules::ACTION->%s($arg) })))",
-            $name, $re, $name);
+    return "    (?<$name>  (?> (?{ Regexp::Rules::_prepare() }) $re (?{ Regexp::Rules::_finalize('$name') })))";
 }
 
 sub _construct_regexp {
@@ -75,7 +72,7 @@ sub _construct_regexp {
     }
     for my $token (@TOKENS) {
         my ($name, $re) = @$token;
-        $re = "($re)";
+        $re = "(?:$re)";
         push @inner, _compile_re($name, $re, 1);
     }
     my $inner = join("\n", @inner);
@@ -143,7 +140,6 @@ sub parse_rule {
     lex_read(length($1));
     $re =~ s/\A\{//;
     $re =~ s/\}\z//;
-    warn $re;
     lex_read_space;
 
     return (sub { $name, $re });
@@ -174,10 +170,10 @@ package Regexp::Rules::Base {
     sub parse {
         my ($class, $expression, $action) = @_;
         local $ACTION = $action // 'Regexp::Rules::DefaultAction';
-        local @STACK;
+        local @STACK = ([]);
         my $regexp = $class->regexp;
         my $ok = ($expression =~ /\A(?:$regexp)\z/);
-        return $ok ? shift @STACK : undef;
+        return $ok ? shift $STACK[0] : undef;
     }
 }
 
@@ -188,7 +184,15 @@ package Regexp::Rules::DefaultAction {
         my ($class, $stuff) = @_;
         my $meth = substr $AUTOLOAD, length('Regexp::Rules::DefaultAction::');
         # use Data::Dumper; warn Dumper([$meth, $stuff]);
-        [$meth, $stuff];
+        if (defined $^N) {
+            if (@$stuff == 0) {
+                $^N;
+            } else {
+                [$^N, $stuff];
+            }
+        } else {
+            @$stuff == 1 ? $stuff->[0] : $stuff;
+        }
     }
 }
 
@@ -199,10 +203,14 @@ package Regexp::Rules::SexpAction {
         my ($class, $stuff) = @_;
         my $meth = substr $AUTOLOAD, length('Regexp::Rules::SexpAction::');
         # use Data::Dumper; warn Dumper([$meth, $stuff]);
-        if (ref $stuff) {
-            "($meth " . join(" ", @$stuff) . ")";
+        if (defined $^N) {
+            if (@$stuff == 0) {
+                $^N;
+            } else {
+                "($^N " . join(" ", @$stuff) . ")";
+            }
         } else {
-            $stuff;
+            join(' ', @$stuff);
         }
     }
 }
@@ -222,9 +230,9 @@ Regexp::Rules - Write your rules in Perl6 like syntax.
 
     grammar Arith {
         rule TOP { (?&additive) };
-        rule additive { (?&multitive) ( [+-] (?&multitive) )* };
-        rule multitive { (?&primary) ( [*/] (?&primary) )* };
-        token primary { [0-9]+ };
+        rule additive  { (?&multitive) (?: ([+-])  (?&multitive) )* };
+        rule multitive { (?&primary)   (?: ([*\/]) (?&primary)   )* };
+        token primary { ( [0-9]+ ) | (?: [(] (?&additive) [)] ) };
     };
 
     my $ret = Arith->parse('3+5');
@@ -233,32 +241,11 @@ Regexp::Rules - Write your rules in Perl6 like syntax.
 Output is:
 
     $VAR1 = [
-            'TOP',
-            [
+                '+',
                 [
-                'additive',
-                [
-                    [
-                    'multitive',
-                    [
-                        [
-                        'primary',
-                        '5'
-                        ]
-                    ]
-                    ]
+                    '3',
+                    '5'
                 ]
-                ],
-                [
-                'multitive',
-                [
-                    [
-                    'primary',
-                    '3'
-                    ]
-                ]
-                ]
-            ]
             ];
 
 =head1 DESCRIPTION
@@ -273,7 +260,7 @@ B<Current implementation was broken. I want to fix.>
 
 I want a parser library like Perl6 rules, but respects Perl5.
 
-=head1 SYNOPSIS AGAIN
+=head1 HOW DO I WRITE GRAMMARS?
 
     grammar NAME {
         rule TOP { REGEXP_BODY };
@@ -287,17 +274,53 @@ grammar block takes one or more rules and tokens.
 
 You must write TOP rule. It's entry point for parsing.
 
-=head1 HOW TO USE Grammar CLASS.
+So, you need to put parens if you want to capture it. Then, you can use C<$^N> in your action.
+
+=head1 HOW DO I USE GRAMMARS?
 
 After you write a C< grammar SimpleGrammar { ... } >, you can call C<< SimpleGrammar->parse($expresssion[, $action]) >>.
 
 C<$action> is optional. Regexp::Rules uses Regexp::Rules::DefaultAction by default. It constructs very simple AST, was showed at SYNOPSIS section.
 
+=head1 HOW DO I WRITE ACTIONS?
+
+Action class is separated from grammars. It's plain old perl class.
+
 You can write your own action like following.
 
+    package Calculator {
+        sub TOP {
+            my ($class, $children) = @_;
+            @$children;
+        }
+        sub multitive {
+            my ($class, $children) = @_;
+            if (defined $^N) {
+                my $ret = eval '(' . join($^N, @$children) . ')';
+                die $@ if $@;
+                $ret;
+            } else {
+                $children->[0];
+            }
+        }
+        sub additive {
+            my ($class, $children) = @_;
+            if (defined $^N) {
+                my $ret = eval '(' . join($^N, @$children) . ')';
+                die $@ if $@;
+                $ret;
+            } else {
+                $children->[0];
+            }
+        }
+        sub primary {
+            $^N
+        }
+    }
 
-=head1 HOW IT WORKS
+So, C<$^N> is a last captured stuff. See L<perlvar>. You can use it for last captured result, especially an operator.
 
+You can get a children nodes from arguments.
 
 =head1 LICENSE
 

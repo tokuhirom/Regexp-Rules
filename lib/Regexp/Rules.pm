@@ -86,11 +86,11 @@ $inner
 #   qr{
 #       (?&additive)
 #       (?(DEFINE)
-#           # additive <- multitive ([+-] multitive)*
+#           # additive <- multiplicative ([+-] multiplicative)*
 #           (?<additive>
-#               (?> (?&multitive) (?: ([+-]) (?&multitive) (?{ $a=shift @stack; $b=shift @stack; push @stack, [$^N, $a, $b] }))*) )
-#           # multitive <- primary ([*/] primary)*
-#           (?<multitive>
+#               (?> (?&multiplicative) (?: ([+-]) (?&multiplicative) (?{ $a=shift @stack; $b=shift @stack; push @stack, [$^N, $a, $b] }))*) )
+#           # multiplicative <- primary ([*/] primary)*
+#           (?<multiplicative>
 #               (?> (?&primary) (?:([*/]) (?&primary)  (?{ $a= shift @stack; $b = shift @stack; push @stack, [$^N, $a, $b] }))*) )
 #           # primary <- [0-9]+ / [(] additive [)]
 #           (?<primary>
@@ -232,8 +232,8 @@ Regexp::Rules - (EXPERIMENTAL) Write your rules in Perl6 like syntax.
 
     grammar Arith {
         rule TOP { (?&additive) };
-        rule additive  { (?&multitive) (?: ([+-])  (?&multitive) )* };
-        rule multitive { (?&primary)   (?: ([*\/]) (?&primary)   )* };
+        rule additive  { (?&multiplicative) (?: ([+-])  (?&multiplicative) )* };
+        rule multiplicative { (?&primary)   (?: ([*\/]) (?&primary)   )* };
         token primary { ( [0-9]+ ) | (?: [(] (?&additive) [)] ) };
     };
 
@@ -295,7 +295,7 @@ You can write your own action like following.
             my ($class, $children) = @_;
             @$children;
         }
-        sub multitive {
+        sub multiplicative {
             my ($class, $children) = @_;
             if (defined $^N) {
                 my $ret = eval '(' . join($^N, @$children) . ')';

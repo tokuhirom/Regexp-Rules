@@ -11,8 +11,8 @@ use Test::More;
 
 grammar Arith {
    rule TOP { (?&additive) };
-   rule additive  { (?&multitive) (?: ([+-])  (?&multitive) )* };
-   rule multitive { (?&primary)   (?: ([*\/]) (?&primary)   )* };
+   rule additive  { (?&multiplicative) (?: ([+-])  (?&multiplicative) )* };
+   rule multiplicative { (?&primary)   (?: ([*\/]) (?&primary)   )* };
    token primary { ( [0-9]+ ) | (?: [(] (?&additive) [)] ) };
 };
 
@@ -39,7 +39,7 @@ package Calculator {
         my ($class, $children) = @_;
         @$children;
     }
-    sub multitive {
+    sub multiplicative {
         my ($class, $children) = @_;
         if (defined $^N) {
             my $ret = eval '(' . join($^N, @$children) . ')';

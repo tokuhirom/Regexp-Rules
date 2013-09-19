@@ -1,6 +1,5 @@
 package Regexp::Rules;
-use 5.008005;
-use strict;
+use 5.014;
 use warnings;
 
 our $VERSION = "0.01";

@@ -8,9 +8,9 @@ Regexp::Rules - Write your rules in Perl6 like syntax.
 
     grammar Arith {
         rule TOP { (?&additive) };
-        rule additive { (?&multitive) ( [+-] (?&multitive) )* };
-        rule multitive { (?&primary) ( [*/] (?&primary) )* };
-        token primary { [0-9]+ };
+        rule additive  { (?&multitive) (?: ([+-])  (?&multitive) )* };
+        rule multitive { (?&primary)   (?: ([*\/]) (?&primary)   )* };
+        token primary { ( [0-9]+ ) | (?: [(] (?&additive) [)] ) };
     };
 
     my $ret = Arith->parse('3+5');
@@ -19,32 +19,11 @@ Regexp::Rules - Write your rules in Perl6 like syntax.
 Output is:
 
     $VAR1 = [
-            'TOP',
-            [
+                '+',
                 [
-                'additive',
-                [
-                    [
-                    'multitive',
-                    [
-                        [
-                        'primary',
-                        '5'
-                        ]
-                    ]
-                    ]
+                    '3',
+                    '5'
                 ]
-                ],
-                [
-                'multitive',
-                [
-                    [
-                    'primary',
-                    '3'
-                    ]
-                ]
-                ]
-            ]
             ];
 
 # DESCRIPTION
@@ -59,7 +38,7 @@ __Current implementation was broken. I want to fix.__
 
 I want a parser library like Perl6 rules, but respects Perl5.
 
-# SYNOPSIS AGAIN
+# HOW DO I WRITE GRAMMARS?
 
     grammar NAME {
         rule TOP { REGEXP_BODY };
@@ -73,19 +52,53 @@ grammar block takes one or more rules and tokens.
 
 You must write TOP rule. It's entry point for parsing.
 
-# HOW TO USE Grammar CLASS.
+So, you need to put parenthesis if you want to capture it. Then, you can use `$^N` in your action.
+
+# HOW DO I USE GRAMMARS?
 
 After you write a ` grammar SimpleGrammar { ... } `, you can call `SimpleGrammar->parse($expresssion[, $action])`.
 
 `$action` is optional. Regexp::Rules uses Regexp::Rules::DefaultAction by default. It constructs very simple AST, was showed at SYNOPSIS section.
 
+# HOW DO I WRITE ACTIONS?
+
+Action class is separated from grammars. It's plain old perl class.
+
 You can write your own action like following.
 
+    package Calculator {
+        sub TOP {
+            my ($class, $children) = @_;
+            @$children;
+        }
+        sub multitive {
+            my ($class, $children) = @_;
+            if (defined $^N) {
+                my $ret = eval '(' . join($^N, @$children) . ')';
+                die $@ if $@;
+                $ret;
+            } else {
+                $children->[0];
+            }
+        }
+        sub additive {
+            my ($class, $children) = @_;
+            if (defined $^N) {
+                my $ret = eval '(' . join($^N, @$children) . ')';
+                die $@ if $@;
+                $ret;
+            } else {
+                $children->[0];
+            }
+        }
+        sub primary {
+            $^N
+        }
+    }
 
+So, `$^N` is a last captured stuff. See [perlvar](http://search.cpan.org/perldoc?perlvar). You can use it for last captured result, especially an operator.
 
-# HOW IT WORKS
-
-
+You can get a children nodes from arguments.
 
 # LICENSE
 

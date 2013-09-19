@@ -218,6 +218,8 @@ package Regexp::Rules::SexpAction {
 1;
 __END__
 
+=for stopwords binded
+
 =encoding utf-8
 
 =head1 NAME
@@ -274,7 +276,7 @@ grammar block takes one or more rules and tokens.
 
 You must write TOP rule. It's entry point for parsing.
 
-So, you need to put parens if you want to capture it. Then, you can use C<$^N> in your action.
+So, you need to put parenthesis if you want to capture it. Then, you can use C<$^N> in your action.
 
 =head1 HOW DO I USE GRAMMARS?
 

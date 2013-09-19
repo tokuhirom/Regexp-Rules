@@ -22,10 +22,14 @@ note Dumper(Arith->parse('(3+5)*2'));
 # -------------------------------------------------------------------------
 
 subtest 'sexp' => sub {
-    my $ret = Arith->parse('3+5*2', Regexp::Rules::SexpAction::);
-    is $ret, '(+ 3 (* 5 2))', '3+5*2';
-    my $ret = Arith->parse('(3+5)*2', Regexp::Rules::SexpAction::);
-    is $ret, '(* (+ 3 5) 2)', '(3+5)*2';
+    {
+        my $ret = Arith->parse('3+5*2', Regexp::Rules::SexpAction::);
+        is $ret, '(+ 3 (* 5 2))', '3+5*2';
+    }
+    {
+        my $ret = Arith->parse('(3+5)*2', Regexp::Rules::SexpAction::);
+        is $ret, '(* (+ 3 5) 2)', '(3+5)*2';
+    }
 };
 
 # -------------------------------------------------------------------------
